@@ -33,7 +33,7 @@ export class RNNoise {
 
     const builder = nn.createModelBuilder();
 
-    const input = builder.input('input', {type: 'float32', dimensions: [this.batchSize_, 100, 42]});
+    const input = builder.input('input', {type: 'float32', dimensions: [this.batchSize_, this.frames_, 42]});
     const inputDenseKernel0 = builder.constant({type: 'float32', dimensions: [42, 24]}, inputDenseKernel0Data);
     const inputDense0 = builder.matmul(input, inputDenseKernel0);
 
@@ -51,7 +51,7 @@ export class RNNoise {
 
     const vadGruYTransposed = builder.transpose(vadGruY, {permutation: [2, 0, 1, 3]});
 
-    const vadGruTranspose1 = builder.reshape(vadGruYTransposed, [-1, 100, 24]);
+    const vadGruTranspose1 = builder.reshape(vadGruYTransposed, [-1, this.frames_, 24]);
 
     const concatenate1 = builder.concat([inputDenseTanh0, vadGruTranspose1, input], 2);
 
@@ -63,7 +63,7 @@ export class RNNoise {
     const [, noiseGruY] = builder.gru(noiseGruX, noiseGruW, noiseGruR, this.frames_, 48, {bias: noiseGruB, recurrentBias: noiseGruRB, returnSequence: true, resetAfter: false, activations: ["sigmoid", "relu"]});
     const noiseGruYTransposed = builder.transpose(noiseGruY, {permutation: [2, 0, 1, 3]});
 
-    const noiseGruTranspose1 = builder.reshape(noiseGruYTransposed, [-1, 100, 48]);
+    const noiseGruTranspose1 = builder.reshape(noiseGruYTransposed, [-1, this.frames_, 48]);
 
     const concatenate2 = builder.concat([vadGruTranspose1, noiseGruTranspose1, input], 2);
     
@@ -75,7 +75,7 @@ export class RNNoise {
     const [, denoiseGruY] = builder.gru(denoiseGruX, denoiseGruW, denoiseGruR, this.frames_, 96, {bias: denoiseGruB, recurrentBias: denoiseGruRB, returnSequence: true, resetAfter: false, activations: ["sigmoid", "relu"]});
     const denoiseGruYTransposed = builder.transpose(denoiseGruY, {permutation: [2, 0, 1, 3]});
 
-    const denoiseGruTranspose1 = builder.reshape(denoiseGruYTransposed, [-1, 100, 96]);
+    const denoiseGruTranspose1 = builder.reshape(denoiseGruYTransposed, [-1, this.frames_, 96]);
 
     const denoiseOutputKernel0 = builder.constant({type: 'float32', dimensions: [96, 22]}, denoiseOutputKernel0Data);
     const denoiseOutput0 = builder.matmul(denoiseGruTranspose1, denoiseOutputKernel0);
