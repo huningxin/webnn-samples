@@ -1,14 +1,17 @@
 <html>
 
 <body>
-  <audio id="audio" src="./eat_44100.wav" controls="controls">
+  <audio id="audio" src="./audio/airconditioner.wav" controls="controls">
     Your browser does not support the audio element.
-  </audio>
+  </audio> <br>
 
-  <button type="button" id="play">Play</button>
+  <button type="button" id="denoise" disabled>Denoise</button>
+  <button type="button" id="play" >Play</button>
 </body>
-<script src="https://webmachinelearning.github.io/webnn-polyfill/dist/webnn-polyfill.js"></script>
-<script src="./feature/rnnoise.js"></script>
+<script src="https://code.jquery.com/jquery-3.5.1.slim.min.js" integrity="sha384-DfXdz2htPH0lsSSs5nCTpuj/zy4C+OGpamoFVy38MVBnE+IbbVYUew+OrCXaRkfj" crossorigin="anonymous"></script>
+<!-- <script src="https://webmachinelearning.github.io/webnn-polyfill/dist/webnn-polyfill.js"></script> -->
+<script src="./dist/webnn-polyfill.js"></script>
+<script src="signal/signal.js"></script>
 <script type="module" src="./rnnoise.js"></script>
 <script type="module" src="./processer.js"></script>
 <script type="module" src="./main.js"></script>
