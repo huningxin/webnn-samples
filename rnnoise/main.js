@@ -22,7 +22,7 @@ const DenoiseInfo = document.getElementById('denoise-info');
 const fileInput = document.getElementById('file-input');
 const originalAudio = document.getElementById('original-audio');
 const denoisedAudio = document.getElementById('denoised-audio');
-const recorderWorker = new Worker('./recorderWorker.js');
+const recorderWorker = new Worker('./utils/recorderWorker.js');
 
 recorderWorker.postMessage({
   command: 'init',
@@ -65,7 +65,10 @@ async function denoise() {
   let audioData = [];
   let audioContext = new AudioContext({sampleRate: 48000});
   let sampleRate = audioContext.sampleRate;
-  let steps = 40000;
+  let steps = 48000;
+  let vadInitialHiddenStateBuffer = new Float32Array(1 * batchSize * 24).fill(0);
+  let noiseInitialHiddenStateBuffer = new Float32Array(1 * batchSize * 48).fill(0);
+  let denoiseInitialHiddenStateBuffer = new Float32Array(1 * batchSize * 96).fill(0);
 
   if(audioContext.state != "running") {
     audioContext.resume().then(function() {
@@ -91,13 +94,20 @@ async function denoise() {
     let start = performance.now();
     let features = analyser.preProcessing(framePCM);
     const preProcessingTime = (performance.now() - start).toFixed(2);
-    let inputTensor = new Float32Array(features);
+    let inputBuffer = new Float32Array(features);
     start = performance.now();
-    let outputTensor = await rnnoise.compute(inputTensor);
+    let outputs = await rnnoise.compute(
+      inputBuffer, vadInitialHiddenStateBuffer, 
+      noiseInitialHiddenStateBuffer, denoiseInitialHiddenStateBuffer
+    );
     const executionTime = (performance.now() - start).toFixed(2);
     // rnnoise.dispose();
+    vadInitialHiddenStateBuffer = outputs.vadGruYH.buffer;
+    noiseInitialHiddenStateBuffer = outputs.noiseGruYH.buffer;
+    denoiseInitialHiddenStateBuffer = outputs.denoiseGruYH.buffer;
+
     start = performance.now();
-    let output = analyser.postProcessing(outputTensor.buffer);
+    let output = analyser.postProcessing(outputs.denoiseOutput.buffer);
     const postProcessingTime = (performance.now() - start).toFixed(2);
     if (i == 0 ) {
       audioData.push(...output);
@@ -162,7 +172,7 @@ fileInput.addEventListener('input', (event) => {
 });
 
 window.onload = async function () {
-  log(modelInfo, `Creating NSNet2 with input shape ` +
+  log(modelInfo, `Creating RNNoise with input shape ` +
     `[${batchSize} (batch_size) x 100 (frames) x 42].`, true);
   log(modelInfo, '- Loading model...');
   let start = performance.now();
