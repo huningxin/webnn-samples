@@ -194,12 +194,10 @@ window.onload = async function() {
   console.log(`compilation elapsed time: ${compilationTime} ms`);
   log(modelInfo,
       `done in <span class='text-primary'>${compilationTime}</span> ms.`, true);
-  while (1) {
-    if (runtime) {
-      log(modelInfo, '- DSP library Loaded.', true);
-      break;
-    }
+  while (runtime == false) {
+    console.log('Wait for DSP library to complete loading...');
   }
+  log(modelInfo, '- DSP library Loaded.', true);
   log(modelInfo, 'RNNoise is <b>ready</b>.');
   $('#choose-audio').attr('disabled', false);
 };
