@@ -30,6 +30,7 @@
     "eslint-config-google": "^0.14.0"
   },
   "scripts": {
-    "lint": "eslint . --ext .js"
+    "lint": "eslint . --ext .js",
+    "fix": "eslint ./rnnoise/*.js --fix"
   }
 }
