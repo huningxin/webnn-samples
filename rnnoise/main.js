@@ -1,9 +1,9 @@
-import {Processer} from './processer.js';
-import {RNNoise} from './rnnoise.js';
+import { Processer } from './processer.js';
+import { RNNoise } from './rnnoise.js';
 
 let runtime = false;
-let batchSize = 1;
-let rnnoise = new RNNoise('./model/', batchSize);  //Frames is fixed at 100
+const batchSize = 1;
+const rnnoise = new RNNoise('./model/', batchSize); // Frames is fixed at 100
 
 const sampleAudios = [{
   name: 'babbel',
@@ -26,31 +26,31 @@ const recorderWorker = new Worker('./utils/recorderWorker.js');
 
 recorderWorker.postMessage({
   command: 'init',
-  config: {sampleRate: 48000, numChannels: 1},
+  config: { sampleRate: 48000, numChannels: 1 },
 });
 
-recorderWorker.onmessage = function( e ) {
+recorderWorker.onmessage = function (e) {
   const blob = e.data;
   denoisedAudio.src = URL.createObjectURL(blob);
 };
 
-Module.onRuntimeInitialized = function() {
+Module.onRuntimeInitialized = function () {
   runtime = true;
   console.log('WASM Runtime Ready.');
 };
 
-function getUrlById (audioList, id) {
+function getUrlById(audioList, id) {
   for (const audio of Object.values(audioList).flat()) {
     if (id === audio.name) {
       return audio.url;
     }
   }
   return null;
-};
+}
 
-function log (infoElement, message, sep = false, append = true) {
+function log(infoElement, message, sep = false, append = true) {
   infoElement.innerHTML = (append ? infoElement.innerHTML : '') + message +
-      (sep ? '<br>' : '');
+    (sep ? '<br>' : '');
 }
 
 originalAudio.onplay = () => {
@@ -62,43 +62,49 @@ denoisedAudio.onplay = () => {
 };
 
 async function denoise() {
-  let audioData = [];
-  let audioContext = new AudioContext({sampleRate: 48000});
-  let sampleRate = audioContext.sampleRate;
-  let steps = 48000;
-  let vadInitialHiddenStateBuffer = new Float32Array(1 * batchSize * 24).fill(0);
-  let noiseInitialHiddenStateBuffer = new Float32Array(1 * batchSize * 48).fill(0);
-  let denoiseInitialHiddenStateBuffer = new Float32Array(1 * batchSize * 96).fill(0);
+  const audioData = [];
+  const audioContext = new AudioContext({ sampleRate: 48000 });
+  const sampleRate = audioContext.sampleRate;
+  const steps = 48000;
+  let vadInitialHiddenStateBuffer = new Float32Array(
+    1 * batchSize * 24,
+  ).fill(0);
+  let noiseInitialHiddenStateBuffer = new Float32Array(
+    1 * batchSize * 48,
+  ).fill(0);
+  let denoiseInitialHiddenStateBuffer = new Float32Array(
+    1 * batchSize * 96,
+  ).fill(0);
 
-  if(audioContext.state != "running") {
-    audioContext.resume().then(function() {
-      console.log('audioContext resumed.')
+  if (audioContext.state != 'running') {
+    audioContext.resume().then(function () {
+      console.log('audioContext resumed.');
     });
   }
-  let analyser = new Processer(audioContext, originalAudio);
-  let pcm = await analyser.getAudioPCMData();
-  let frames = Math.ceil(pcm.length / steps);
-  let lastFrameSize = pcm.length - steps * (frames - 1);
+  const analyser = new Processer(audioContext, originalAudio);
+  const pcm = await analyser.getAudioPCMData();
+  const frames = Math.ceil(pcm.length / steps);
+  const lastFrameSize = pcm.length - steps * (frames - 1);
 
   const processStart = performance.now();
   for (let i = 0; i < frames; i++) {
     let framePCM;
-    if (i != (frames -1)) {
+    if (i != (frames - 1)) {
       framePCM = pcm.subarray(i * steps, i * steps + sampleRate);
     } else {
       framePCM = new Float32Array(sampleRate).fill(0);
-      for(let j = 0; j < lastFrameSize; j++) {
-        framePCM[j] = pcm[i*sampleRate + j];
+      for (let j = 0; j < lastFrameSize; j++) {
+        framePCM[j] = pcm[i * sampleRate + j];
       }
     }
     let start = performance.now();
-    let features = analyser.preProcessing(framePCM);
+    const features = analyser.preProcessing(framePCM);
     const preProcessingTime = (performance.now() - start).toFixed(2);
-    let inputBuffer = new Float32Array(features);
+    const inputBuffer = new Float32Array(features);
     start = performance.now();
-    let outputs = await rnnoise.compute(
-      inputBuffer, vadInitialHiddenStateBuffer, 
-      noiseInitialHiddenStateBuffer, denoiseInitialHiddenStateBuffer
+    const outputs = await rnnoise.compute(
+      inputBuffer, vadInitialHiddenStateBuffer,
+      noiseInitialHiddenStateBuffer, denoiseInitialHiddenStateBuffer,
     );
     const executionTime = (performance.now() - start).toFixed(2);
     // rnnoise.dispose();
@@ -107,12 +113,11 @@ async function denoise() {
     denoiseInitialHiddenStateBuffer = outputs.denoiseGruYH.buffer;
 
     start = performance.now();
-    let output = analyser.postProcessing(outputs.denoiseOutput.buffer);
+    const output = analyser.postProcessing(outputs.denoiseOutput.buffer);
     const postProcessingTime = (performance.now() - start).toFixed(2);
-    if (i == 0 ) {
+    if (i == 0) {
       audioData.push(...output);
-    }
-    else {
+    } else {
       audioData.push(...output.slice(sampleRate - steps));
     }
 
@@ -128,7 +133,7 @@ async function denoise() {
   }
   const processTime = (performance.now() - processStart).toFixed(2);
   log(DenoiseInfo, `<b>Done.</b> Processed ${frames * 100} ` +
-  `frames in <span class='text-primary'>${processTime}</span> ms.`, true)
+    `frames in <span class='text-primary'>${processTime}</span> ms.`, true);
 
 
   // Send the denoised audio data for wav encoding.
@@ -145,15 +150,16 @@ async function denoise() {
   });
 }
 
-$(".dropdown-item").click(async (e) => {
+$('.dropdown-item').click(async (e) => {
   const audioId = $(e.target).attr('id');
-  if(audioId == 'browse') {
+  if (audioId == 'browse') {
     const evt = document.createEvent('MouseEvents');
     evt.initEvent('click', true, false);
     fileInput.dispatchEvent(evt);
   } else {
     const audioUrl = getUrlById(sampleAudios, audioId);
-    log(audioName, audioUrl.substring(audioUrl.lastIndexOf('/') + 1), false, false);
+    log(audioName,
+      audioUrl.substring(audioUrl.lastIndexOf('/') + 1), false, false);
     originalAudio.src = audioUrl;
     denoisedAudio.src = '';
     await denoise();
@@ -163,11 +169,11 @@ $(".dropdown-item").click(async (e) => {
 fileInput.addEventListener('input', (event) => {
   log(audioName, event.target.files[0].name, false, false);
   const reader = new FileReader();
-  reader.onload = async function(e) {
+  reader.onload = async function (e) {
     originalAudio.src = e.target.result;
     denoisedAudio.src = '';
     await denoise();
-  }
+  };
   reader.readAsDataURL(event.target.files[0]);
 });
 
@@ -179,19 +185,21 @@ window.onload = async function () {
   await rnnoise.load();
   const loadingTime = (performance.now() - start).toFixed(2);
   console.log(`loading elapsed time: ${loadingTime} ms`);
-  log(modelInfo, `done in <span class='text-primary'>${loadingTime}</span> ms.`, true);
+  log(modelInfo,
+    `done in <span class='text-primary'>${loadingTime}</span> ms.`, true);
   log(modelInfo, '- Compiling model...');
   start = performance.now();
   await rnnoise.compile();
   const compilationTime = (performance.now() - start).toFixed(2);
   console.log(`compilation elapsed time: ${compilationTime} ms`);
-  log(modelInfo, `done in <span class='text-primary'>${compilationTime}</span> ms.`, true);
-  while(1) {
+  log(modelInfo,
+    `done in <span class='text-primary'>${compilationTime}</span> ms.`, true);
+  while (1) {
     if (runtime) {
       log(modelInfo, '- DSP library Loaded.', true);
       break;
     }
   }
-  log(modelInfo, 'RNNoise is <b>ready</b>.')
-  $("#choose-audio").attr("disabled", false);
-}
+  log(modelInfo, 'RNNoise is <b>ready</b>.');
+  $('#choose-audio').attr('disabled', false);
+};
