@@ -1,0 +1,32 @@
+name: build and deploy
+
+on:
+  push:
+    branches:
+      - master
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    steps:
+    - name: Checkout
+      uses: actions/checkout@v2
+      with:
+        persist-credentials: false
+
+    - name: Lint
+      run: |
+        npm install
+        npm run lint
+    
+    - name: Rebase
+      run: |
+        git rebase origin/gh-pages
+
+    - name: Deploy
+      uses: JamesIves/github-pages-deploy-action@3.7.1
+      with:
+        GITHUB_TOKEN: ${{secrets.GITHUB_TOKEN}}
+        BRANCH: gh-pages
+        FOLDER: .
+        CLEAN: true
