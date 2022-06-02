@@ -201,7 +201,14 @@ export function getUrlParams() {
     powerPreference = null;
   }
 
-  return [numRuns, powerPreference];
+  let numThreads = params.get('numThreads');
+  numThreads = numThreads === null ? undefined : parseInt(numThreads);
+  if (numThreads < 1) {
+    addAlert(`Ignore the url param: 'numThreads', its value must be >= 1.`);
+    numThreads = undefined;
+  }
+
+  return [numRuns, powerPreference, numThreads];
 }
 
 // Set backend for using WebNN-polyfill or WebNN
@@ -283,13 +290,5 @@ export function isWebNN() {
   // This would be used in
   // https://github.com/webmachinelearning/webnn-native/tree/main/node/examples/electron/webnn-samples,
   // where WebNN is enabled by default.
-  if (isElectron()) {
-    return true;
-  } else {
-    if (navigator.ml && navigator.ml.createContext()) {
-      return !navigator.ml.createContext().tf;
-    } else {
-      return false;
-    }
-  }
+  return typeof MLGraphBuilder !== 'undefined';
 }
