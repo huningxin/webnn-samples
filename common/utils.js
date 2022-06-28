@@ -286,8 +286,8 @@ export function isWebNN() {
   if (isElectron()) {
     return true;
   } else {
-    if (navigator.ml && navigator.ml.createContext()) {
-      return !navigator.ml.createContext().tf;
+    if (navigator.ml && typeof MLGraphBuilder !== 'undefined') {
+      return true;
     } else {
       return false;
     }
