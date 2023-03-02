@@ -1,5 +1,6 @@
 import {NSNet2} from './nsnet2.js';
 import * as featurelib from './featurelib.js';
+import {sizeOfShape, getUrlParams} from '../common/utils.js';
 
 export class Denoiser {
   constructor(batchSize, frames, sampleRate) {
@@ -24,22 +25,29 @@ export class Denoiser {
     }
   }
 
-  async prepare() {
+  async prepare(deviceType) {
     return new Promise((resolve, reject) => {
       this.log(' - Loading weights... ');
       const start = performance.now();
-      this.nsnet.load('./weights/', this.batchSize, this.frames).then(() => {
+      const weightsUrl = '../test-data/models/nsnet2/weights/';
+      const powerPreference = getUrlParams()[1];
+      const contextOptions = {deviceType};
+      if (powerPreference) {
+        contextOptions['powerPreference'] = powerPreference;
+      }
+      this.nsnet.load(contextOptions, weightsUrl,
+          this.batchSize, this.frames).then((outputOperand) => {
         const modelLoadTime = performance.now() - start;
         this.log(`done in <span class='text-primary'>` +
             `${modelLoadTime.toFixed(2)}</span> ms.`, true);
-        this.log(' - Compiling... ');
+        this.log(' - Building... ');
         setTimeout(async () => {
           try {
             const start = performance.now();
-            await this.nsnet.compile();
-            const modelCompileTime = performance.now() - start;
+            await this.nsnet.build(outputOperand);
+            const modelBuildTime = performance.now() - start;
             this.log(`done in <span class='text-primary'>` +
-                `${modelCompileTime.toFixed(2)}</span> ms.`, true);
+                `${modelBuildTime.toFixed(2)}</span> ms.`, true);
             this.log(' - Warming up iSTFT... ');
           } catch (error) {
             reject(error);
@@ -80,6 +88,14 @@ export class Denoiser {
         new Float32Array(1 * this.batchSize * this.nsnet.hiddenSize);
     let initialHiddenState155Buffer =
         new Float32Array(1 * this.batchSize * this.nsnet.hiddenSize);
+    const outputShape = [this.batchSize, this.frames, this.nsnet.frameSize];
+    const gru94Shape =
+        [this.batchSize, 1, this.batchSize, this.nsnet.hiddenSize];
+    const gru157Shape =
+        [this.batchSize, 1, this.batchSize, this.nsnet.hiddenSize];
+    const outputBuffer = new Float32Array(sizeOfShape(outputShape));
+    const gru94Buffer = new Float32Array(sizeOfShape(gru94Shape));
+    const gru157Buffer = new Float32Array(sizeOfShape(gru157Shape));
     for (let frame = 0; !lastIteration; frame += this.frames - overlap * 2) {
       lastIteration = frame + this.frames + 1 > audioFrames;
       const audioSize = sizePerFrame * (this.frames + 1);
@@ -104,15 +120,16 @@ export class Denoiser {
       const calcFeatTime = (performance.now() - start).toFixed(2);
       start = performance.now();
       const outputs = await this.nsnet.compute(
-          inputData, initialHiddenState92Buffer, initialHiddenState155Buffer);
+          inputData, initialHiddenState92Buffer, initialHiddenState155Buffer,
+          outputBuffer, gru94Buffer, gru157Buffer);
       const computeTime = (performance.now() - start).toFixed(2);
-      initialHiddenState92Buffer = outputs.gru94.buffer;
-      initialHiddenState155Buffer = outputs.gru157.buffer;
+      initialHiddenState92Buffer = outputs.gru94;
+      initialHiddenState155Buffer = outputs.gru157;
       start = performance.now();
       let sliceStart;
       let sliceSize;
       const sigOut = tf.tidy(() => {
-        const out = tf.tensor(outputs.output.buffer, outputs.output.dimensions);
+        const out = tf.tensor(outputs.output, outputShape);
         let Gain = tf.transpose(out);
         Gain = tf.clipByValue(Gain, this.mingain, 1.0);
         // Workaround tf.js WebGL backend for complex data.

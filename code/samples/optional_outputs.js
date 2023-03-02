@@ -1,7 +1,7 @@
-const nn = navigator.ml.getNeuralNetworkContext();
+const context = await navigator.ml.createContext();
 
-// Build a model with two outputs.
-const builder = nn.createModelBuilder();
+// Build a graph with two outputs.
+const builder = new MLGraphBuilder(context);
 const descA = {type: 'float32', dimensions: [3, 4]};
 const a = builder.input('a', descA);
 const descB = {type: 'float32', dimensions: [4, 3]};
@@ -12,22 +12,17 @@ const bufferC = new Float32Array(sizeOfShape(descC.dimensions)).fill(1);
 const c = builder.constant(descC, bufferC);
 const d = builder.matmul(a, b);
 const e = builder.add(d, c);
-const model = builder.createModel({d, e});
+const graph = await builder.build({'d': d, 'e': e});
 
-const compiledModel = await model.compile();
 const bufferA = new Float32Array(sizeOfShape(descA.dimensions)).fill(0.5);
-const inputs = {'a': {buffer: bufferA}};
-
-// Compute both d and e.
-let outputs = await compiledModel.compute(inputs);
-console.log(`outputs include ${Object.keys(outputs)}`);
+const inputs = {'a': bufferA};
 
 // Compute d.
-outputs = await compiledModel.compute(inputs, {d});
-console.log(`outputs include ${Object.keys(outputs)}`);
-console.log(`shape: [${outputs.d.dimensions}], values: ${outputs.d.buffer}`);
+const bufferD = new Float32Array(sizeOfShape([3, 3]));
+const resultsD = await context.compute(graph, inputs, {'d': bufferD});
+console.log(`values: ${resultsD.outputs.d}`);
 
 // Compute e.
-outputs = await compiledModel.compute(inputs, {e});
-console.log(`outputs include ${Object.keys(outputs)}`);
-console.log(`shape: [${outputs.e.dimensions}], values: ${outputs.e.buffer}`);
+const bufferE = new Float32Array(sizeOfShape([3, 3]));
+const resultsE = await context.compute(graph, inputs, {'e': bufferE});
+console.log(`values: ${resultsE.outputs.e}`);

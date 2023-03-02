@@ -1,9 +1,11 @@
 'use strict';
 
+import * as utils from '../common/utils.js';
 import {LeNet} from './lenet.js';
 import {Pen} from './pen.js';
+import {addAlert} from '../common/ui.js';
 
-const compilationTimeElement = document.getElementById('compilationTime');
+const buildTimeElement = document.getElementById('buildTime');
 const inferenceTimeElement = document.getElementById('inferenceTime');
 const predictButton = document.getElementById('predict');
 const nextButton = document.getElementById('next');
@@ -15,6 +17,10 @@ digitCanvas.setAttribute('height', 28);
 digitCanvas.setAttribute('width', 28);
 digitCanvas.style.backgroundColor = 'black';
 const digitContext = digitCanvas.getContext('2d');
+
+$('#backendBtns .btn').on('change', async () => {
+  await main();
+});
 
 function drawNextDigitFromMnist() {
   const n = Math.floor(Math.random() * 10);
@@ -37,6 +43,12 @@ function getInputFromCanvas() {
   return input;
 }
 
+function getMedianValue(array) {
+  array = array.sort((a, b) => a - b);
+  return array.length % 2 !== 0 ? array[Math.floor(array.length / 2)] :
+      (array[array.length / 2 - 1] + array[array.length / 2]) / 2;
+}
+
 function clearResult() {
   for (let i = 0; i < 3; ++i) {
     const labelElement = document.getElementById(`label${i}`);
@@ -46,39 +58,71 @@ function clearResult() {
   }
 }
 
-export async function main() {
+async function main() {
+  const [backend, deviceType] =
+      $('input[name="backend"]:checked').attr('id').split('_');
+  await utils.setBackend(backend, deviceType);
   drawNextDigitFromMnist();
   const pen = new Pen(visualCanvas);
-  const lenet = new LeNet('lenet.bin');
+  const weightUrl = '../test-data/models/lenet_nchw/weights/lenet.bin';
+  const lenet = new LeNet(weightUrl);
+  const [numRuns, powerPreference] = utils.getUrlParams();
   try {
+    const contextOptions = {deviceType};
+    if (powerPreference) {
+      contextOptions['powerPreference'] = powerPreference;
+    }
     let start = performance.now();
-    await lenet.load();
+    const outputOperand = await lenet.load(contextOptions);
     console.log(
         `loading elapsed time: ${(performance.now() - start).toFixed(2)} ms`);
 
     start = performance.now();
-    await lenet.compile();
-    const compilationTime = performance.now() - start;
-    console.log(`compilation elapsed time: ${compilationTime.toFixed(2)} ms`);
-    compilationTimeElement.innerHTML = 'Compilation Time: ' +
-        `<span class='text-primary'>${compilationTime.toFixed(2)}</span> ms`;
+    await lenet.build(outputOperand);
+    const buildTime = performance.now() - start;
+    console.log(`build elapsed time: ${buildTime.toFixed(2)} ms`);
+    buildTimeElement.innerHTML = 'Build Time: ' +
+        `<span class='text-primary'>${buildTime.toFixed(2)}</span> ms`;
 
     predictButton.removeAttribute('disabled');
   } catch (error) {
     console.log(error);
-    addWarning(error.message);
+    addAlert(error.message);
   }
   predictButton.addEventListener('click', async function(e) {
     try {
+      let start;
+      let inferenceTime;
+      const inferenceTimeArray = [];
       const input = getInputFromCanvas();
-      const start = performance.now();
-      const result = await lenet.predict(input);
-      const inferenceTime = performance.now() - start.toFixed(2);
-      console.log(`execution elapsed time: ${inferenceTime.toFixed(2)} ms`);
-      inferenceTimeElement.innerHTML = 'Execution Time: ' +
-          `<span class='text-primary'>${inferenceTime.toFixed(2)}</span> ms`;
-      console.log(`execution result: ${result}`);
-      const classes = topK(Array.from(result));
+      let outputBuffer = new Float32Array(utils.sizeOfShape([1, 10]));
+
+      // Do warm up
+      let results = await lenet.compute(input, outputBuffer);
+
+      for (let i = 0; i < numRuns; i++) {
+        start = performance.now();
+        results = await lenet.compute(
+            results.inputs.input, results.outputs.output);
+        inferenceTime = performance.now() - start;
+        console.log(`execution elapsed time: ${inferenceTime.toFixed(2)} ms`);
+        inferenceTimeArray.push(inferenceTime);
+      }
+
+      if (numRuns === 1) {
+        inferenceTimeElement.innerHTML = 'Execution Time: ' +
+            `<span class='text-primary'>${inferenceTime.toFixed(2)}</span> ms`;
+      } else {
+        const medianInferenceTime = getMedianValue(inferenceTimeArray);
+        console.log(`median execution elapsed time: ` +
+            `${medianInferenceTime.toFixed(2)} ms`);
+        inferenceTimeElement.innerHTML = `Median Execution Time(${numRuns}` +
+            ` runs): <span class='text-primary'>` +
+            `${medianInferenceTime.toFixed(2)}</span> ms`;
+      }
+
+      outputBuffer = results.outputs.output;
+      const classes = topK(Array.from(outputBuffer));
       classes.forEach((c, i) => {
         console.log(`\tlabel: ${c.label}, probability: ${c.prob}%`);
         const labelElement = document.getElementById(`label${i}`);
@@ -88,7 +132,7 @@ export async function main() {
       });
     } catch (error) {
       console.log(error);
-      addWarning(error.message);
+      addAlert(error.message);
     }
   });
   nextButton.addEventListener('click', () => {
@@ -121,13 +165,4 @@ function topK(probs, k = 3) {
   }
 
   return classes;
-}
-
-function addWarning(msg) {
-  const div = document.createElement('div');
-  div.setAttribute('class', 'alert alert-warning alert-dismissible fade show');
-  div.setAttribute('role', 'alert');
-  div.innerHTML = msg;
-  const container = document.getElementById('container');
-  container.insertBefore(div, container.childNodes[0]);
 }

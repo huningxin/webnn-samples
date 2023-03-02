@@ -4,12 +4,49 @@
     <meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no">
     <title>WebNN NSNet2 Example</title>
     <link rel="stylesheet" href="https://stackpath.bootstrapcdn.com/bootstrap/4.5.2/css/bootstrap.min.css" integrity="sha384-JcKb8q3iqJ61gNV9KGb8thSsNjpSL0n8PARn9HuZOnIxN0hoP+VmmDGMN5t9UJ0Z" crossorigin="anonymous">
+    <link rel="stylesheet" href="../common/css/style.css">
+    <link rel="icon" type="image/x-icon" href="../common/img/favicon/favicon.ico">
+    <link rel="apple-touch-icon" sizes="180x180" href="../common/img/favicon/apple-touch-icon.png">
+    <link rel="icon" type="image/png" sizes="32x32" href="../common/img/favicon/favicon-32x32.png">
+    <link rel="icon" type="image/png" sizes="16x16" href="../common/img/favicon/favicon-16x16.png">
+    <link rel="manifest" href="../common/img/favicon/site.webmanifest">
   </head>
   <body>
-    <nav class="navbar navbar-expand-md navbar-dark bg-dark" style="width:100%">
-      <span class="navbar-brand mb-0 h1">WebNN NSNet2 Example</span>
+    <nav class="navbar navbar-expand-md navbar-dark">
+      <a href="../index.html">
+        <div class="logosvg" id="logosvg"></div>
+      </a>
+      <span class="navbar-brand">Noise Suppression (NSNet2)</span>
+      <ul class="navbar-nav"></ul>
     </nav>
     <div class="container" id="container">
+      <div class="row mb-3 mt-3 align-items-center">
+        <div class="col-md">
+        </div>
+        <div class="col-md-8">
+          <div class="card">
+            <div class="card-body">
+              <div class="btn-group-toggle" data-toggle="buttons" id="backendBtns">
+                <span class='mr-3'>Backend</span>
+                <label class="btn btn-outline-info" name="polyfill">
+                  <input type="radio" name="backend" id="polyfill_cpu" autocomplete="off">Wasm (CPU)
+                </label>
+                <label class="btn btn-outline-info" name="polyfill">
+                  <input type="radio" name="backend" id="polyfill_gpu" autocomplete="off">WebGL (GPU)
+                </label>
+                <label class="btn btn-outline-info" name="webnn">
+                  <input type="radio" name="backend" id="webnn_cpu" autocomplete="off">WebNN (CPU)
+                </label>
+                <label class="btn btn-outline-info" name="webnn">
+                  <input type="radio" name="backend" id="webnn_gpu" autocomplete="off">WebNN (GPU)
+                </label>
+              </div>
+            </div>
+          </div>
+        </div>
+        <div class="col-md">
+        </div>
+      </div>
       <div class="row">
         <div class="col-md">
         </div>
@@ -25,7 +62,7 @@
         <div class="col-md-8">
           <div class="input-group mb-3" style="width: 80%;">
             <div class="input-group-prepend">
-              <button id="choose-audio" type="button" class="btn btn-primary dropdown-toggle" data-toggle="dropdown" aria-haspopup="true" aria-expanded="false" disabled>
+              <button id="choose-audio" type="button" class="btn btn-info btn-lg dropdown-toggle" data-toggle="dropdown" aria-haspopup="true" aria-expanded="false" disabled>
                 Choose a sample audio
               </button>
               <div class="dropdown-menu">
@@ -61,17 +98,29 @@
         </div>
       </div>
     </div>
+    <footer class="text-muted text-center text-small mt-5">
+      <div id="badge"></div>
+      <p>&copy;2022 <a href="https://webmachinelearning.github.io/">WebNN API</a></p>
+    </footer>
+    <script>
+      // This workaround is to fix jquery loading issue in electron.
+      // Refer to https://stackoverflow.com/questions/32621988/electron-jquery-is-not-defined.
+      if (typeof module === "object") {
+        window.tempModule = module;
+        module = undefined;
+      }
+    </script>
     <script src="https://code.jquery.com/jquery-3.5.1.slim.min.js" integrity="sha384-DfXdz2htPH0lsSSs5nCTpuj/zy4C+OGpamoFVy38MVBnE+IbbVYUew+OrCXaRkfj" crossorigin="anonymous"></script>
     <script src="https://cdn.jsdelivr.net/npm/popper.js@1.16.1/dist/umd/popper.min.js" integrity="sha384-9/reFTGAW83EW2RDu2S0VKaIzap3H66lZH81PoYlFhbGU+6BZp6G7niu735Sk7lN" crossorigin="anonymous"></script>
     <script src="https://stackpath.bootstrapcdn.com/bootstrap/4.5.2/js/bootstrap.min.js" integrity="sha384-B4gt1jrGC7Jh4AgTPSdUtOBvfO8shuf57BaghqFfPlYxofvL8/KUEfYiJOMMV+rV" crossorigin="anonymous"></script>
-    <script src="https://webmachinelearning.github.io/webnn-polyfill/dist/webnn-polyfill.js"></script>
-    <script src="./libs/numpy.js"></script>
-    <script src="https://cdn.jsdelivr.net/npm/@tensorflow/tfjs@2.8.5"> </script>
-    <script type="module">
-      import {main} from './main.js';
-      window.onload = function() {
-        main();
-      }
+    <script src="https://cdn.jsdelivr.net/npm/@tensorflow/tfjs@3.9.0/dist/tf.min.js" integrity="sha256-28ZvjeNGrGNEIj9/2D8YAPE6Vm5JSvvDs+LI4ED31x8=" crossorigin="anonymous"></script>
+    <script>
+      // To restore module after loading 3rd-party libraries.
+      if (window.tempModule) module = window.tempModule;
     </script>
+    <script type="module" src="./main.js"></script>
+    <script type="module" src="../common/component/component.js"></script>
+    <script async src="https://www.googletagmanager.com/gtag/js?id=G-6TK7JD3KKY"></script>
+    <script src="../common/libs/gtag.js"></script>
   </body>
 </html>

@@ -1,7 +1,7 @@
 ## WebNN API LeNet Example
 This example showcases the [LeNet](http://yann.lecun.com/exdb/publis/pdf/lecun-01a.pdf)-based handwritten digits classification by WebNN API.
 
-This example leverages the network topology of [the LeNet example of Caffe*](https://github.com/BVLC/caffe/tree/master/examples/mnist), the weights of [the LeNet example of OpenVINO*](https://github.com/openvinotoolkit/openvino/tree/2020/inference-engine/samples/ngraph_function_creation_sample) and the MNIST dataset of [mnist.js](https://github.com/cazala/mnist).
+This example leverages the network topology of [the LeNet example of Caffe*](https://github.com/BVLC/caffe/tree/master/examples/mnist), the weights of [the LeNet example of OpenVINO*](https://github.com/openvinotoolkit/openvino/blob/master/inference-engine/samples/ngraph_function_creation_sample/) and the MNIST dataset of [mnist.js](https://github.com/cazala/mnist).
 
 The following diagram illustrates the topology of [lenet.prototxt](https://github.com/BVLC/caffe/blob/master/examples/mnist/lenet.prototxt).
 
@@ -77,20 +77,10 @@ The following table lists the corresponding WebNN ops and parameters for each la
     </tbody>
 </table>
 
-### Setup
-Install dependencies:
-```sh
-> npm install
-```
-
-Start the web server:
-```sh
-> npm start
-```
-
-Open the web browser and navigate to http://localhost:8080
-
 ### Usage
+
+Click the `Device` switch button to choose device preference for inference.
+
 Click the `Predict` button to predict the digit shown in the canvas.
 
 Click the `Next` button to pick up another digit from MNIST dataset.

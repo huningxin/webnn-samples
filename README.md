@@ -5,11 +5,21 @@
 
 * [WebNN code editor](https://webmachinelearning.github.io/webnn-samples/code/)
 * [Handwritten digits classification](https://webmachinelearning.github.io/webnn-samples/lenet/)
-* [Noise suppression](https://webmachinelearning.github.io/webnn-samples/nsnet2/)
+* Noise suppression:
+  * [NSNet2](https://webmachinelearning.github.io/webnn-samples/nsnet2/)
+  * [RNNoise](https://webmachinelearning.github.io/webnn-samples/rnnoise/)
+* [Fast style transfer](https://webmachinelearning.github.io/webnn-samples/style_transfer/)
+* [Image classification](https://webmachinelearning.github.io/webnn-samples/image_classification/)
+* [Object detection](https://webmachinelearning.github.io/webnn-samples/object_detection/)
+* [Semantic segmentation](https://webmachinelearning.github.io/webnn-samples/semantic_segmentation/)
+* [Facial Landmark Detection](https://webmachinelearning.github.io/webnn-samples/facial_landmark_detection/)
 
-### Setup & Lint
+### Setup & Run
 
 ```sh
-> npm install
-> npm run lint
+>  git clone --recurse-submodules https://github.com/webmachinelearning/webnn-samples
+> cd webnn-samples & npm install
+> npm start
 ```
+
+Open the web browser and navigate to http://localhost:8080
