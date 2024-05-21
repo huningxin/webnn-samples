@@ -1,6 +1,6 @@
 'use strict';
 
-import {buildConstantByNpy, weightsOrigin} from '../common/utils.js';
+import {buildConstantByNpy, sizeOfShape, weightsOrigin} from '../common/utils.js';
 
 // MobileNet V2 model with 'nchw' input layout
 export class MobileNetV2Nchw {
@@ -28,6 +28,8 @@ export class MobileNetV2Nchw {
       inputDimensions: [1, 3, 224, 224],
     };
     this.outputDimensions = [1, 1000];
+    this.inputMLBuffer_ = null;
+    this.outputMLBuffer_ = null;
   }
 
   async buildConv_(input, name, relu6 = true, options = {}) {
@@ -152,6 +154,8 @@ export class MobileNetV2Nchw {
 
   async build(outputOperand) {
     this.graph_ = await this.builder_.build({'output': outputOperand});
+    this.inputMLBuffer_ = this.context_.createBuffer({size: sizeOfShape(this.inputOptions.inputDimensions) * 4});
+    this.outputMLBuffer_ = this.context_.createBuffer({size: sizeOfShape(this.outputDimensions) * 4});
   }
 
   // Release the constant tensors of a model
@@ -163,9 +167,15 @@ export class MobileNetV2Nchw {
   }
 
   async compute(inputBuffer, outputBuffer) {
-    const inputs = {'input': inputBuffer};
-    const outputs = {'output': outputBuffer};
-    const results = await this.context_.compute(this.graph_, inputs, outputs);
-    return results;
+    // const inputs = {'input': inputBuffer};
+    // const outputs = {'output': outputBuffer};
+    // const results = await this.context_.compute(this.graph_, inputs, outputs);
+    const inputs = {'input': this.inputMLBuffer_};
+    const outputs = {'output': this.outputMLBuffer_};
+    this.context_.writeBuffer(this.inputMLBuffer_, inputBuffer, 0, inputBuffer.length);
+    this.context_.dispatch(this.graph_, inputs, outputs);
+    const outputArrayBuffer = await this.context_.readBuffer(this.outputMLBuffer_);
+    outputBuffer.set(new Float32Array(outputArrayBuffer));
+    return {'inputs': {'input': inputBuffer}, 'outputs': {'output': outputBuffer}};
   }
 }
