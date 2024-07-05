@@ -154,8 +154,8 @@ export class MobileNetV2Nchw {
 
   async build(outputOperand) {
     this.graph_ = await this.builder_.build({'output': outputOperand});
-    this.inputMLBuffer_ = this.context_.createBuffer({size: sizeOfShape(this.inputOptions.inputDimensions) * 4});
-    this.outputMLBuffer_ = this.context_.createBuffer({size: sizeOfShape(this.outputDimensions) * 4});
+    this.inputMLBuffer_ = this.context_.createBuffer({dataType: this.dataType_, dimensions: this.inputOptions.inputDimensions});
+    this.outputMLBuffer_ = this.context_.createBuffer({dataType: this.dataType_, dimensions: this.outputDimensions});
   }
 
   // Release the constant tensors of a model
