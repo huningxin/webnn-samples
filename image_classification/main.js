@@ -8,6 +8,7 @@ import {SqueezeNetNchw} from './squeezenet_nchw.js';
 import {SqueezeNetNhwc} from './squeezenet_nhwc.js';
 import {ResNet50V2Nchw} from './resnet50v2_nchw.js';
 import {ResNet50V2Nhwc} from './resnet50v2_nhwc.js';
+import {Mobilenet} from "./mobilenet.js"
 import * as ui from '../common/ui.js';
 import * as utils from '../common/utils.js';
 
@@ -325,7 +326,7 @@ async function main() {
             deviceType : lastdeviceType;
         lastBackend = lastBackend != backend ? backend : lastBackend;
       }
-      instanceType = modelName + layout;
+      instanceType = modelName + 'nchw';
       netInstance = constructNetObject(instanceType);
       inputOptions = netInstance.inputOptions;
       labels = await fetchLabels(inputOptions.labelUrl);
@@ -342,14 +343,16 @@ async function main() {
         contextOptions['numThreads'] = numThreads;
       }
       start = performance.now();
-      const outputOperand = await netInstance.load(contextOptions);
-      loadTime = (performance.now() - start).toFixed(2);
-      console.log(`  done in ${loadTime} ms.`);
-      // UI shows model building progress
-      await ui.showProgressComponent('done', 'current', 'pending');
-      console.log('- Building... ');
-      start = performance.now();
-      await netInstance.build(outputOperand);
+      // const outputOperand = await netInstance.load(contextOptions);
+      // loadTime = (performance.now() - start).toFixed(2);
+      // console.log(`  done in ${loadTime} ms.`);
+      // // UI shows model building progress
+      // await ui.showProgressComponent('done', 'current', 'pending');
+      // console.log('- Building... ');
+      // start = performance.now();
+      // await netInstance.build(outputOperand);
+      var model = new Mobilenet();
+      await model.build(contextOptions);
       buildTime = (performance.now() - start).toFixed(2);
       console.log(`  done in ${buildTime} ms.`);
     }
@@ -362,11 +365,13 @@ async function main() {
       let medianComputeTime;
 
       // Do warm up
-      let outputBuffer = await netInstance.compute(inputBuffer);
+      // let outputBuffer = await netInstance.compute(inputBuffer);
+      let outputBuffer = (await model.run({'input': inputBuffer})).output
 
       for (let i = 0; i < numRuns; i++) {
         start = performance.now();
-        outputBuffer = await netInstance.compute(inputBuffer);
+        // outputBuffer = await netInstance.compute(inputBuffer);
+        outputBuffer = (await model.run({'input': inputBuffer})).output
         computeTime = (performance.now() - start).toFixed(2);
         console.log(`  compute time ${i+1}: ${computeTime} ms`);
         computeTimeArray.push(Number(computeTime));
