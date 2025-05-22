@@ -607,21 +607,13 @@ export class SelfieSegmenterNhwc {
 
     // Transpose input from NCHW -> NHWC.
 
-    const input = builder.transpose(
-        builder.input('input', {dataType: 'float32', shape: [1, 144, 256, 3]}),
-        { permutation: [0, 2, 3, 1] }
-    );
+    const input = builder.input('input', {dataType: 'float32', shape: [1, 144, 256, 3]});
 
     this.inputTensors_['input'] = await this.context_.createTensor(
         {dataType: 'float32', shape: [1, 144, 256, 3], writable: true}
     );
 
     // Create graph operators.
-
-    const var_Conv2D__6_0 = builder.transpose(
-        input,
-        { permutation: [0, 3, 1, 2] }
-    );
 
     // Re-create constant operand from transposed weights.
 
@@ -631,7 +623,7 @@ export class SelfieSegmenterNhwc {
     );
 
     const var_Conv__158_0 = builder.conv2d(
-        var_Conv2D__6_0, var_Conv2D_filter_0_transposed,
+        input, var_Conv2D_filter_0_transposed,
         {
             bias: var_conv2d_1_y_0, strides: [2, 2], padding: [0, 1, 0, 1], dilations: [1, 1], groups: 1, filterLayout: 'ohwi', inputLayout: 'nhwc'
         }
@@ -1847,42 +1839,16 @@ export class SelfieSegmenterNhwc {
 
     const var_conv2d_transpose_add_0 = builder.add(var_conv2d_transpose_0, const_fold_opt__402);
 
-    const var_segment_back_raw_output___4_0 = builder.sigmoid(var_conv2d_transpose_add_0);
-
-    const segment_back = builder.reshape(
-        var_segment_back_raw_output___4_0,
-        (() => {
-        const shape = [1, 144, 256, 1];
-        // Calculate the concrete size for value -1.
-        if (shape.includes(-1)) {
-            const count = shape.filter(v => v === -1).length;
-            if (count !== 1) {
-                throw new Error('Only one -1 is allowed in reshape shape');
-            }
-            const totalInput = var_segment_back_raw_output___4_0.shape.reduce((a, b) => a * b, 1);
-            const known = shape.reduce((a, b) => b === -1 ? a : a * b, 1);
-            const idx = shape.indexOf(-1);
-            shape[idx] = totalInput / known;
-        }
-        return shape;
-    })()
-    );
+    const segment_back = builder.sigmoid(var_conv2d_transpose_add_0);
 
     // Build graph with output operands.
 
-    // Transpose output from NHWC TO NCHW.
-
-    const segment_back_nchw = builder.transpose(
-        segment_back,
-        { permutation: [0, 3, 1, 2] }
-    );
-
-    this.graph_ = await builder.build({'segment_back': segment_back_nchw});
+    this.graph_ = await builder.build({'segment_back': segment_back});
 
     // Create graph output tensors.
 
     this.outputTensors_['segment_back'] = await this.context_.createTensor(
-        {dataType: segment_back_nchw.dataType, shape: segment_back_nchw.shape, readable: true}
+        {dataType: segment_back.dataType, shape: segment_back.shape, readable: true}
     );
 
   }
