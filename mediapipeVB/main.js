@@ -5,6 +5,8 @@ import { buildWebGL2Pipeline } from "./lib/webgl2/webgl2Pipeline.js";
 import * as ui from "../common/ui.js";
 import { WebnnSelfieSegmenterGeneral } from "./webnn_selfie_segmenter_general.js";
 import { WebnnSelfieSegmenterLandscape } from "./webnn_selfie_segmenter_landscape.js";
+import { SelfieSegmenterNhwc } from "./selfie_segmenter_nhwc.js"
+import { SelfieSegmenter } from "./selfie_segmenter.js"
 
 const imgElement = document.getElementById("feedElement");
 imgElement.src = "./images/test.jpg";
@@ -117,7 +119,8 @@ async function compute(modelType, inputBuffer) {
       outputData = result["segment_back"].cpuData;
     }
   } else {
-    outputData = await wnnModel.compute(inputBuffer);
+    // outputData = await wnnModel.compute(inputBuffer);
+    outputData = (await wnnModel.run({'input': inputBuffer}))['segment_back'];
   }
   // console.timeEnd('compute function');
   return outputData;
@@ -330,17 +333,31 @@ export async function main() {
           options
         );
       } else {
-        wnnModel =
-          resolutionType == "landscape"
-            ? new WebnnSelfieSegmenterLandscape(deviceType)
-            : new WebnnSelfieSegmenterGeneral(deviceType);
-        const graph = await wnnModel.load({ deviceType });
+        // wnnModel =
+        //   resolutionType == "landscape"
+        //     ? new WebnnSelfieSegmenterLandscape(deviceType)
+        //     : new WebnnSelfieSegmenterGeneral(deviceType);
+        // const graph = await wnnModel.load({ deviceType });
+
+        // Select model based on preferred input layout
+        const context = await navigator.ml.createContext({deviceType});
+        const layout = context.opSupportLimits().preferredInputLayout;
+        if (layout == 'nhwc') {
+          wnnModel = new SelfieSegmenterNhwc();
+          wnnModel.layout = 'nhwc';
+          wnnModel.inputShape = [1,144,256,3]
+        } else {
+          wnnModel = new SelfieSegmenter();
+          wnnModel.layout = 'nhwc'
+          wnnModel.inputShape = [1,144,256,3]
+        }
         inputOptions.inputLayout = wnnModel.layout;
         inputOptions.inputShape = wnnModel.inputShape;
         console.log(
           `- Loading WebNN model: [${resolutionType}] deviceType: [${deviceType}] preferredLayout: [${wnnModel.layout}]`
         );
-        await wnnModel.build(graph);
+        // await wnnModel.build(graph);
+        await wnnModel.build({ deviceType });
       }
       loadTime = performance.now() - start;
       console.log(`  done in ${loadTime.toFixed(2)} ms.`);
