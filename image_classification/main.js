@@ -9,6 +9,8 @@ import {SqueezeNetNhwc} from './squeezenet_nhwc.js';
 import {ResNet50V2Nchw} from './resnet50v2_nchw.js';
 import {ResNet50V2Nhwc} from './resnet50v2_nhwc.js';
 import {Mobilenet} from "./mobilenet.js"
+import {MobilenetQdq} from "./mobilenet_qdq.js"
+import {MobilenetQdqNhwc} from "./mobilenet_qdq_nhwc.js"
 import * as ui from '../common/ui.js';
 import * as utils from '../common/utils.js';
 
@@ -351,7 +353,7 @@ async function main() {
       // console.log('- Building... ');
       // start = performance.now();
       // await netInstance.build(outputOperand);
-      var model = new Mobilenet();
+      var model = new MobilenetQdqNhwc();
       await model.build(contextOptions);
       buildTime = (performance.now() - start).toFixed(2);
       console.log(`  done in ${buildTime} ms.`);
